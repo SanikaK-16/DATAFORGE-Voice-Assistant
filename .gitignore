@@ -43,3 +43,5 @@ google-services.json
 # Python cache
 __pycache__/
 *.pyc
+
+backend/tests/sample_audio.wav

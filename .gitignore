@@ -45,3 +45,5 @@ __pycache__/
 *.pyc
 
 backend/tests/sample_audio.wav
+
+backend/tests/rime_output.wav

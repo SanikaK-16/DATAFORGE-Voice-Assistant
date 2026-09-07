@@ -47,3 +47,5 @@ __pycache__/
 backend/tests/sample_audio.wav
 
 backend/tests/rime_output.wav
+
+backend/tests/final_response.wav

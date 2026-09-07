@@ -1,4 +1,3 @@
-
 package com.ovia
 
 import android.Manifest
@@ -23,24 +22,24 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.ovia.ui.theme.OviaTheme
+import com.ovia.accessibility.OviaAccessibilityService
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
     private var speechRecognizer: SpeechRecognizer? = null
-
     private var textToSpeech: TextToSpeech? = null
 
     private var recognizedText by mutableStateOf("")
-
     private var assistantResponse by mutableStateOf("")
-
     private var isListening by mutableStateOf(false)
 
     private val microphonePermissionLauncher =
@@ -55,17 +54,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
 
-        // Initialize Text-to-Speech
         textToSpeech = TextToSpeech(this) { status ->
+
             if (status == TextToSpeech.SUCCESS) {
                 textToSpeech?.language = Locale.getDefault()
             }
         }
 
-        // Initialize Speech Recognizer
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechRecognizer =
+            SpeechRecognizer.createSpeechRecognizer(this)
 
         speechRecognizer?.setRecognitionListener(
             object : RecognitionListener {
@@ -78,47 +78,51 @@ class MainActivity : ComponentActivity() {
                     isListening = true
                 }
 
-                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onRmsChanged(rmsdB: Float) {
+                }
 
-                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onBufferReceived(buffer: ByteArray?) {
+                }
 
                 override fun onEndOfSpeech() {
                     isListening = false
                 }
 
                 override fun onError(error: Int) {
+
                     isListening = false
 
                     recognizedText = when (error) {
+
                         SpeechRecognizer.ERROR_AUDIO ->
-                            "Error: microphone/audio problem"
+                            "Audio error"
 
                         SpeechRecognizer.ERROR_CLIENT ->
-                            "Error: client problem"
+                            "Client error"
 
                         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
-                            "Error: microphone permission denied"
+                            "Microphone permission denied"
 
                         SpeechRecognizer.ERROR_NETWORK ->
-                            "Error: network problem"
+                            "Network error"
 
                         SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
-                            "Error: network timeout"
+                            "Network timeout"
 
                         SpeechRecognizer.ERROR_NO_MATCH ->
-                            "Error: no speech detected"
+                            "No speech detected"
 
                         SpeechRecognizer.ERROR_RECOGNIZER_BUSY ->
-                            "Error: recognizer is busy"
+                            "Recognizer busy"
 
                         SpeechRecognizer.ERROR_SERVER ->
-                            "Error: speech server problem"
+                            "Server error"
 
                         SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
-                            "Error: speech timeout"
+                            "Speech timeout"
 
                         else ->
-                            "Error code: $error"
+                            "Speech error: $error"
                     }
                 }
 
@@ -138,39 +142,117 @@ class MainActivity : ComponentActivity() {
 
                 override fun onPartialResults(
                     partialResults: Bundle?
-                ) {}
+                ) {
+                }
 
                 override fun onEvent(
                     eventType: Int,
                     params: Bundle?
-                ) {}
+                ) {
+                }
             }
         )
 
         setContent {
-            OviaTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
 
-                    OviaHomeScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        recognizedText = recognizedText,
-                        assistantResponse = assistantResponse,
-                        isListening = isListening,
+            Scaffold(
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
 
-                        onStartListening = {
-                            requestMicrophonePermission()
-                        },
+                OviaHomeScreen(
+                    modifier = Modifier.padding(innerPadding),
 
-                        onTestResponse = {
-                            assistantResponse =
-                                "Hello! I am Ovia, your AI voice assistant."
+                    recognizedText = recognizedText,
 
-                            speak(assistantResponse)
-                        }
-                    )
-                }
+                    assistantResponse = assistantResponse,
+
+                    isListening = isListening,
+
+                    onStartListening = {
+                        requestMicrophonePermission()
+                    },
+
+                    onTestResponse = {
+
+                        assistantResponse =
+                            "Hello! I am Ovia, your AI voice assistant."
+
+                        speak(assistantResponse)
+                    },
+
+                    onTestSwipe = {
+
+                        val service =
+                            OviaAccessibilityService.instance
+
+                        assistantResponse =
+                            if (service != null) {
+
+                                val success = service.swipe(
+                                    startX = 500f,
+                                    startY = 1400f,
+                                    endX = 500f,
+                                    endY = 500f
+                                )
+
+                                if (success) {
+                                    "Swipe command sent successfully."
+                                } else {
+                                    "Swipe command failed."
+                                }
+
+                            } else {
+
+                                "Accessibility Service is not connected."
+                            }
+                    },
+
+                    onTestBack = {
+
+                        val service =
+                            OviaAccessibilityService.instance
+
+                        assistantResponse =
+                            if (service != null) {
+
+                                val success =
+                                    service.goBack()
+
+                                if (success) {
+                                    "Back command sent successfully."
+                                } else {
+                                    "Back command failed."
+                                }
+
+                            } else {
+
+                                "Accessibility Service is not connected."
+                            }
+                    },
+
+                    onTestWorkflow = {
+
+                        val service =
+                            OviaAccessibilityService.instance
+
+                        assistantResponse =
+                            if (service != null) {
+
+                                val success =
+                                    service.runDemoWorkflow()
+
+                                if (success) {
+                                    "Demo workflow completed."
+                                } else {
+                                    "Demo workflow failed."
+                                }
+
+                            } else {
+
+                                "Accessibility Service is not connected."
+                            }
+                    }
+                )
             }
         }
     }
@@ -183,8 +265,11 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.RECORD_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
         ) {
+
             startSpeechRecognition()
+
         } else {
+
             microphonePermissionLauncher.launch(
                 Manifest.permission.RECORD_AUDIO
             )
@@ -193,30 +278,30 @@ class MainActivity : ComponentActivity() {
 
     private fun startSpeechRecognition() {
 
-        val intent = Intent(
-            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-        ).apply {
+        val intent =
+            Intent(
+                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            ).apply {
 
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
 
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE,
-                Locale.getDefault()
-            )
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE,
+                    Locale.getDefault()
+                )
 
-            putExtra(
-                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-                true
-            )
-        }
+                putExtra(
+                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                    true
+                )
+            }
 
         speechRecognizer?.startListening(intent)
     }
 
-    // Android Text-to-Speech
     private fun speak(text: String) {
 
         textToSpeech?.speak(
@@ -228,6 +313,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+
         super.onDestroy()
 
         speechRecognizer?.destroy()
@@ -239,6 +325,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
 fun OviaHomeScreen(
     modifier: Modifier = Modifier,
@@ -246,15 +333,22 @@ fun OviaHomeScreen(
     assistantResponse: String,
     isListening: Boolean,
     onStartListening: () -> Unit,
-    onTestResponse: () -> Unit
+    onTestResponse: () -> Unit,
+    onTestSwipe: () -> Unit,
+    onTestBack: () -> Unit,
+    onTestWorkflow: () -> Unit
 ) {
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+
+        horizontalAlignment =
+            Alignment.CenterHorizontally,
+
+        verticalArrangement =
+            Arrangement.Center
     ) {
 
         Text(
@@ -278,6 +372,7 @@ fun OviaHomeScreen(
         Button(
             onClick = onStartListening
         ) {
+
             Text(
                 if (isListening)
                     "🎙 Listening..."
@@ -287,13 +382,43 @@ fun OviaHomeScreen(
         }
 
         Spacer(
-            modifier = Modifier.height(16.dp)
+            modifier = Modifier.height(12.dp)
         )
 
         Button(
             onClick = onTestResponse
         ) {
             Text("🔊 Test AI Response")
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Button(
+            onClick = onTestSwipe
+        ) {
+            Text("↕️ Test Swipe")
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Button(
+            onClick = onTestBack
+        ) {
+            Text("↩️ Test Back")
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Button(
+            onClick = onTestWorkflow
+        ) {
+            Text("🎯 Test Demo Workflow")
         }
 
         Spacer(

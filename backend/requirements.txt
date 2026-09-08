@@ -4,3 +4,7 @@ python-dotenv
 google-genai
 httpx
 deepgram-sdk
+livekit-agents
+livekit-plugins-deepgram
+livekit-plugins-google
+livekit-plugins-rime

@@ -32,3 +32,20 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Environment variables
+.env
+*.env
+
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+backend/tests/sample_audio.wav
+
+backend/tests/rime_output.wav
+
+backend/tests/final_response.wav

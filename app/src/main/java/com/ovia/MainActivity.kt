@@ -32,6 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ovia.accessibility.OviaAccessibilityService
 import java.util.Locale
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import kotlin.concurrent.thread
 
 class MainActivity : ComponentActivity() {
 
@@ -46,9 +52,10 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
-
             if (isGranted) {
                 startSpeechRecognition()
+            } else {
+                recognizedText = "Microphone permission denied"
             }
         }
 
@@ -58,7 +65,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         textToSpeech = TextToSpeech(this) { status ->
-
             if (status == TextToSpeech.SUCCESS) {
                 textToSpeech?.language = Locale.getDefault()
             }
@@ -89,11 +95,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 override fun onError(error: Int) {
-
                     isListening = false
 
                     recognizedText = when (error) {
-
                         SpeechRecognizer.ERROR_AUDIO ->
                             "Audio error"
 
@@ -127,7 +131,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 override fun onResults(results: Bundle?) {
-
                     isListening = false
 
                     val matches =
@@ -137,6 +140,7 @@ class MainActivity : ComponentActivity() {
 
                     if (!matches.isNullOrEmpty()) {
                         recognizedText = matches[0]
+                        sendToBackend(recognizedText)
                     }
                 }
 
@@ -154,18 +158,14 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-
             Scaffold(
                 modifier = Modifier.fillMaxSize()
             ) { innerPadding ->
 
                 OviaHomeScreen(
                     modifier = Modifier.padding(innerPadding),
-
                     recognizedText = recognizedText,
-
                     assistantResponse = assistantResponse,
-
                     isListening = isListening,
 
                     onStartListening = {
@@ -173,7 +173,6 @@ class MainActivity : ComponentActivity() {
                     },
 
                     onTestResponse = {
-
                         assistantResponse =
                             "Hello! I am Ovia, your AI voice assistant."
 
@@ -181,7 +180,6 @@ class MainActivity : ComponentActivity() {
                     },
 
                     onTestSwipe = {
-
                         val service =
                             OviaAccessibilityService.instance
 
@@ -202,13 +200,11 @@ class MainActivity : ComponentActivity() {
                                 }
 
                             } else {
-
                                 "Accessibility Service is not connected."
                             }
                     },
 
                     onTestBack = {
-
                         val service =
                             OviaAccessibilityService.instance
 
@@ -225,13 +221,11 @@ class MainActivity : ComponentActivity() {
                                 }
 
                             } else {
-
                                 "Accessibility Service is not connected."
                             }
                     },
 
                     onTestWorkflow = {
-
                         val service =
                             OviaAccessibilityService.instance
 
@@ -248,11 +242,76 @@ class MainActivity : ComponentActivity() {
                                 }
 
                             } else {
-
                                 "Accessibility Service is not connected."
                             }
                     }
                 )
+            }
+        }
+    }
+
+    private fun sendToBackend(text: String) {
+
+        thread {
+
+            try {
+
+                val client = OkHttpClient()
+
+                val json = JSONObject()
+                json.put("text", text)
+
+                val requestBody =
+                    json.toString()
+                        .toRequestBody(
+                            "application/json".toMediaType()
+                        )
+
+                val request =
+                    Request.Builder()
+                        .url("http://192.168.10.34:8000/voice")
+                        .post(requestBody)
+                        .build()
+
+                client.newCall(request).execute().use { response ->
+
+                    val responseBody =
+                        response.body?.string()
+
+                    if (response.isSuccessful && responseBody != null) {
+
+                        val jsonResponse =
+                            JSONObject(responseBody)
+
+                        val reply =
+                            jsonResponse.getString("response")
+
+                        runOnUiThread {
+
+                            assistantResponse = reply
+
+                            speak(reply)
+                        }
+
+                    } else {
+
+                        runOnUiThread {
+
+                            assistantResponse =
+                                "Backend returned HTTP ${response.code}"
+                        }
+                    }
+                }
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+
+                runOnUiThread {
+
+                    assistantResponse =
+                        "Backend error: ${e.message}"
+                }
             }
         }
     }

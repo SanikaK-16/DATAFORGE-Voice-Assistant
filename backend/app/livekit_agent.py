@@ -1,5 +1,3 @@
-from turtle import done
-
 from dotenv import load_dotenv
 
 from livekit.agents import (
